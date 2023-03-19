@@ -28,17 +28,27 @@ so each row takes up 2 bytes, and there are 8 rows per sprite, giving a total of
 
 just for comparisson: spr just uses a byte (uint8_t) for each pixel, giving a total of 64 bytes per sprite. 4x less efficient!
 
+**example:**
+```
+the row:    1030 2111
+left byte:  1010 0111 = $a7
+right byte: 0010 1000 = $28
+
+data[0] = $a7
+data[8] = $28
+```
+
 ## building
 
 * requirements:
-* * ncurses
-* * c compiler (gcc/tcc)
-* * linux? maybe?
+  * ncurses
+  * c compiler (gcc/tcc)
+  * linux? maybe?
 
 * makefile has all your favourites:
-* * make run
-* * make clean
-* * make debug
+  * make run
+  * make clean
+  * make debug
 
 ## config
 
