@@ -112,18 +112,15 @@ void spr_draw() {
   if (!spr.redraw)
     return;
 
-  clear();
-  refresh();
-
   wclear(spr.status);
   spr_status();
   wrefresh(spr.status);
 
-  for (int x = 0; x < 2; x++) {
-    for (int y = 0; y < 2; y++) {
-      wclear(spr.draw[x][y]);
+  for (int X = 0; X < 2; X++) {
+    for (int Y = 0; Y < 2; Y++) {
+      wclear(spr.draw[X][Y]);
       spr_draw_data();
-      wrefresh(spr.draw[x][y]);
+      wrefresh(spr.draw[X][Y]);
     }
   }
 
@@ -201,6 +198,18 @@ int curses_init() {
 #endif
 
   start_color();
+
+#ifdef RGB
+  init_color(COLOR_BLACK, BLACK);
+  init_color(COLOR_RED, RED);
+  init_color(COLOR_GREEN, GREEN);
+  init_color(COLOR_YELLOW, YELLOW);
+  init_color(COLOR_BLUE, BLUE);
+  init_color(COLOR_MAGENTA, MAGENTA);
+  init_color(COLOR_CYAN, CYAN);
+  init_color(COLOR_WHITE, WHITE);
+#endif
+
   init_pair(1, COLOR_0_FG, COLOR_0_BG);
   init_pair(2, COLOR_1_FG, COLOR_1_BG);
   init_pair(3, COLOR_2_FG, COLOR_2_BG);

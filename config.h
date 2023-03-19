@@ -11,8 +11,31 @@
 
 #define SHOW_NUMBERS 1
 
+//================= COLORS ======================
 // sets the colors to display, has no impact on the actual output
-// uses colors from CURSES
+
+// uncomment this to allow custom colors
+#define RGB
+
+// the format is R, G, B [0 - 1000]
+#define BLACK 0, 0, 0
+#define RED 1000, 0, 0
+#define GREEN 0, 1000, 0
+#define YELLOW 1000, 1000, 0
+#define BLUE 0, 0, 1000
+#define MAGENTA 1000, 0, 1000
+#define CYAN 0, 1000, 1000
+#define WHITE 1000, 1000, 1000
+
+// options are:
+// COLOR_BLACK
+// COLOR_RED
+// COLOR_GREEN
+// COLOR_YELLOW
+// COLOR_BLUE
+// COLOR_MAGENTA
+// COLOR_CYAN
+// COLOR_WHITE
 #define COLOR_0_BG COLOR_BLACK
 #define COLOR_0_FG COLOR_WHITE
 
