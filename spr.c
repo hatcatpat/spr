@@ -11,19 +11,6 @@
 struct spr_ spr = {0};
 
 //================= WORLD ======================
-void world_init(struct world *world) {
-  memset(world, 0, sizeof(struct world));
-
-#ifdef DEBUG
-  for (int i = 0; i < SZ; ++i)
-    world->data[i] = rand() % 4;
-#endif
-}
-
-void world_destroy(struct world *world) {
-  memset(world, 0, sizeof(struct world));
-}
-
 int color2char(color_t color) {
 #if SHOW_NUMBERS
   return (color ? (color + '1') : COLOR_0) | COLOR_PAIR(color + 1);
@@ -32,7 +19,7 @@ int color2char(color_t color) {
 #endif
 }
 
-void world_draw(struct world *world) {
+void spr_draw_data() {
   for (int Y = 0; Y < 2; ++Y) {
     for (int X = 0; X < 2; ++X) {
       for (int y = 0; y < W; ++y) {
@@ -42,30 +29,29 @@ void world_draw(struct world *world) {
           bool hover =
               (i == spr.tx && j == spr.ty) && (x == spr.x && y == spr.y);
           int attr = hover ? A_STANDOUT : 0;
-          waddch(spr.draw[X][Y],
-                 color2char(world_get(world, x, y, i, j)) | attr);
+          waddch(spr.draw[X][Y], color2char(spr_get(x, y, i, j)) | attr);
         }
       }
     }
   }
 }
 
-int world_geti(int x, int y, int tx, int ty) {
+int spr_geti(int x, int y, int tx, int ty) {
   return (x + y * W) + (tx * W * W + ty * W * W * T);
 }
 
-bool world_edit(struct world *world, int x, int y, int tx, int ty, color_t v) {
-  int I = world_geti(x, y, tx, ty);
-  if (world->data[I] == v)
+bool spr_edit(int x, int y, int tx, int ty, color_t v) {
+  int I = spr_geti(x, y, tx, ty);
+  if (spr.data[I] == v)
     return false;
 
-  world->data[I] = v;
+  spr.data[I] = v;
   return true;
 }
 
-color_t world_get(struct world *world, int x, int y, int tx, int ty) {
+color_t spr_get(int x, int y, int tx, int ty) {
   if (x < W && y < W)
-    return world->data[world_geti(x, y, tx, ty)];
+    return spr.data[spr_geti(x, y, tx, ty)];
   else
     return 0;
 }
@@ -77,31 +63,24 @@ int spr_init(char *name) {
   spr.loop = false;
   spr.edited = false;
   spr.name = name;
-  spr.world = calloc(1, sizeof(struct world));
 
   if (!access(name, F_OK)) {
     if (!access(name, R_OK | W_OK))
-      chr2world(spr.world, name);
+      spr_load();
     else
       return -1;
-  } else
-    world_init(spr.world);
+  }
 
   spr_draw();
 
   return 0;
 }
 
-void spr_destroy() {
-  world_destroy(spr.world);
-  free(spr.world);
-}
-
 char bool2char(bool b) { return b ? '+' : '-'; }
 void spr_status() {
   uint8_t byte[2] = {0};
   for (int i = 0; i < 8; ++i) {
-    color_t col = world_get(spr.world, i, spr.y, spr.tx, spr.ty);
+    color_t col = spr_get(i, spr.y, spr.tx, spr.ty);
     if (col == 0)
       continue;
 
@@ -112,7 +91,7 @@ void spr_status() {
       byte[1] |= BIT(7 - i);
   }
 
-  color_t cur = world_get(spr.world, spr.x, spr.y, spr.tx, spr.ty);
+  color_t cur = spr_get(spr.x, spr.y, spr.tx, spr.ty);
 
   wprintw(spr.status,
           "%s%c :: t[%i,%i] c[%i,%i] :: (%i,%i) :: %c :: %%%c :: %02x+%02x",
@@ -135,7 +114,7 @@ void spr_draw() {
   for (int x = 0; x < 2; x++) {
     for (int y = 0; y < 2; y++) {
       wclear(spr.draw[x][y]);
-      world_draw(spr.world);
+      spr_draw_data();
       wrefresh(spr.draw[x][y]);
     }
   }
@@ -143,26 +122,8 @@ void spr_draw() {
   spr.redraw = false;
 }
 
-int spr_save() {
-  world2chr(spr.world);
-  spr.edited = false;
-  return 0;
-}
-
-void spr_log(char *fmt, ...) {
-  va_list va;
-
-  wclear(spr.out);
-  va_start(va, fmt);
-  vw_printw(spr.out, fmt, va);
-  va_end(va);
-  wrefresh(spr.out);
-}
-
 #define CHR_SZ (W * 2 * T * T)
-void world2chr(struct world *world) {
-  /* curses_clear(); */
-
+int spr_save() {
   // * WRITING THE CHR FORMAT*
   //
   // the pixels (1 row of 8 pixels):
@@ -197,7 +158,7 @@ void world2chr(struct world *world) {
       for (int c = 0; c < 2; ++c) {   // col
         for (int i = 0; i < 4; ++i) { // pixel
           int I = (s * 64) + (8 * r) + (c * 4) + i;
-          color_t col = world->data[I];
+          color_t col = spr.data[I];
           if (col == 0)
             continue;
 
@@ -214,22 +175,33 @@ void world2chr(struct world *world) {
   FILE *f = fopen(spr.name, "wb");
   if (!f) {
     spr_log("[error] unable to open file");
-    return;
+    return 1;
   }
 
   fwrite(data, sizeof(uint8_t), CHR_SZ, f);
   fclose(f);
 
   spr_log("saved :)");
+
+  spr.edited = false;
+  return 0;
 }
 
-void chr2world(struct world *world, char *file) {
-  world_init(world);
+void spr_log(char *fmt, ...) {
+  va_list va;
 
-  FILE *f = fopen(file, "rb");
+  wclear(spr.out);
+  va_start(va, fmt);
+  vw_printw(spr.out, fmt, va);
+  va_end(va);
+  wrefresh(spr.out);
+}
+
+int spr_load() {
+  FILE *f = fopen(spr.name, "rb");
   if (!f) {
     spr_log("[error] unable to read file\n");
-    return;
+    return 1;
   }
 
   fseek(f, 0, SEEK_END);
@@ -263,7 +235,7 @@ void chr2world(struct world *world, char *file) {
       uint8_t L = data[s * W * 2 + r];     // left byte
       uint8_t R = data[s * W * 2 + r + 8]; // right byte
       for (int i = 0; i < 8; ++i)          // pixel
-        world->data[world_geti(i, r, s, 0)] =
+        spr.data[spr_geti(i, r, s, 0)] =
             GET_BIT(L, 7 - i) + 2 * GET_BIT(R, 7 - i);
     }
   }
@@ -273,6 +245,7 @@ void chr2world(struct world *world, char *file) {
 
   spr_log("reloaded :)\n");
   spr.redraw = true;
+  return 0;
 }
 
 //================= CURSES ======================
@@ -325,8 +298,6 @@ void curses_clear() {
 
 //================= MAIN ======================
 int main(int argc, char *argv[]) {
-  srand(time(NULL));
-
   if (curses_init())
     goto CLEANUP;
 
@@ -441,8 +412,7 @@ int main(int argc, char *argv[]) {
     case '2':
     case '3':
     case '4':
-      spr.edited |=
-          world_edit(spr.world, spr.x, spr.y, spr.tx, spr.ty, (ch - '1'));
+      spr.edited |= spr_edit(spr.x, spr.y, spr.tx, spr.ty, (ch - '1'));
       spr.redraw = true;
       break;
 
@@ -456,7 +426,7 @@ int main(int argc, char *argv[]) {
       break;
 
     case 'r':
-      chr2world(spr.world, spr.name);
+      spr_load();
       break;
 
     case 'q':
@@ -468,7 +438,6 @@ int main(int argc, char *argv[]) {
   }
 
 CLEANUP:
-  spr_destroy();
   curses_destroy();
 
   return 0;
