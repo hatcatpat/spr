@@ -2,6 +2,9 @@
 // comment this to disable debug
 #define DEBUG
 
+// comment this to disable mouse
+#define MOUSE
+
 //================= DRAWING ======================
 // sets the char to use for the bg, can be empty
 #define COLOR_0 '.'

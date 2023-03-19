@@ -187,7 +187,6 @@ int spr_save() {
 //================= CURSES ======================
 int curses_init() {
   initscr();
-
   if (LINES < MIN_LINES || COLS < MIN_COLS)
     return 1;
 
@@ -197,6 +196,9 @@ int curses_init() {
   cbreak();
   keypad(stdscr, TRUE);
   curs_set(0);
+#ifdef MOUSE
+  mousemask(BUTTON1_CLICKED, NULL);
+#endif
 
   start_color();
   init_pair(1, COLOR_0_FG, COLOR_0_BG);
@@ -246,10 +248,30 @@ int main(int argc, char *argv[]) {
   }
 
   int ch;
+#ifdef MOUSE
+  MEVENT evt;
+#endif
   while (!spr.quit) {
     ch = getch();
 
     switch (ch) {
+#ifdef MOUSE
+      //================= MOUSE ======================
+    case KEY_MOUSE:
+      if ((getmouse(&evt) == OK) && (evt.bstate & BUTTON1_CLICKED)) {
+        for (int X = 0; X < 2; ++X)
+          for (int Y = 0; Y < 2; ++Y)
+            if (wenclose(spr.draw[X][Y], evt.y, evt.x)) {
+              int x, y;
+              getbegyx(spr.draw[X][Y], y, x);
+              spr.x = evt.x - x, spr.y = evt.y - y;
+              spr.spx = (spr.cx + X) % 16, spr.spy = (spr.cy + Y) % 16;
+              spr.redraw = true;
+            }
+      }
+      break;
+#endif
+
       //================= MOVEMENT ======================
     case KEY_RIGHT:
       if (!spr.loop && spr.x == 8 - 1) {
