@@ -26,8 +26,6 @@ each byte of a chr file describes an 8-pixel wide row, with each bit correspondi
 
 so each row takes up 2 bytes, and there are 8 rows per sprite, giving a total of 16 bytes per sprite
 
-just for comparisson: spr just uses a byte (uint8_t) for each pixel, giving a total of 64 bytes per sprite. 4x less efficient!
-
 **example:**
 ```
 the row:    1030 2111
