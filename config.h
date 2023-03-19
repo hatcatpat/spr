@@ -6,6 +6,8 @@
 // sets the char to use for the bg, can be empty
 #define COLOR_0 '.'
 
+#define SHOW_NUMBERS 1
+
 // sets the colors to display, has no impact on the actual output
 // uses colors from CURSES
 #define COLOR_0_BG COLOR_BLACK

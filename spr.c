@@ -25,22 +25,37 @@ void world_destroy(struct world *world) {
 }
 
 int color2char(color_t color) {
+#if SHOW_NUMBERS
   return (color ? (color + '1') : COLOR_0) | COLOR_PAIR(color + 1);
+#else
+  return (color ? ' ' : COLOR_0) | COLOR_PAIR(color + 1);
+#endif
 }
 
 void world_draw(struct world *world) {
-  for (int y = 0; y < W; ++y)
-    for (int x = 0; x < W; ++x)
-      waddch(spr.draw, color2char(world_get(world, x, y)) |
-                           ((x == spr.x && y == spr.y) ? A_STANDOUT : 0));
+  for (int Y = 0; Y < 2; ++Y) {
+    for (int X = 0; X < 2; ++X) {
+      for (int y = 0; y < W; ++y) {
+        for (int x = 0; x < W; ++x) {
+          int i = (spr.cx + X) % T;
+          int j = (spr.cy + Y) % T;
+          bool hover =
+              (i == spr.tx && j == spr.ty) && (x == spr.x && y == spr.y);
+          int attr = hover ? A_STANDOUT : 0;
+          waddch(spr.draw[X][Y],
+                 color2char(world_get(world, x, y, i, j)) | attr);
+        }
+      }
+    }
+  }
 }
 
 int world_geti(int x, int y, int tx, int ty) {
   return (x + y * W) + (tx * W * W + ty * W * W * T);
 }
 
-bool world_edit(struct world *world, int x, int y, color_t v) {
-  int I = world_geti(x, y, spr.tx, spr.ty);
+bool world_edit(struct world *world, int x, int y, int tx, int ty, color_t v) {
+  int I = world_geti(x, y, tx, ty);
   if (world->data[I] == v)
     return false;
 
@@ -48,9 +63,9 @@ bool world_edit(struct world *world, int x, int y, color_t v) {
   return true;
 }
 
-color_t world_get(struct world *world, int x, int y) {
+color_t world_get(struct world *world, int x, int y, int tx, int ty) {
   if (x < W && y < W)
-    return world->data[world_geti(x, y, spr.tx, spr.ty)];
+    return world->data[world_geti(x, y, tx, ty)];
   else
     return 0;
 }
@@ -59,7 +74,7 @@ color_t world_get(struct world *world, int x, int y) {
 int spr_init(char *name) {
   spr.quit = false;
   spr.redraw = true;
-  spr.loop = true;
+  spr.loop = false;
   spr.edited = false;
   spr.name = name;
   spr.world = calloc(1, sizeof(struct world));
@@ -86,7 +101,7 @@ char bool2char(bool b) { return b ? '+' : '-'; }
 void spr_status() {
   uint8_t byte[2] = {0};
   for (int i = 0; i < 8; ++i) {
-    color_t col = world_get(spr.world, i, spr.y);
+    color_t col = world_get(spr.world, i, spr.y, spr.tx, spr.ty);
     if (col == 0)
       continue;
 
@@ -97,8 +112,12 @@ void spr_status() {
       byte[1] |= BIT(7 - i);
   }
 
-  wprintw(spr.info, "%s%c :: [%i,%i] :: (%i,%i) :: %%%c :: %02x+%02x", spr.name,
-          bool2char(spr.edited), spr.tx, spr.ty, spr.x, spr.y,
+  color_t cur = world_get(spr.world, spr.x, spr.y, spr.tx, spr.ty);
+
+  wprintw(spr.status,
+          "%s%c :: t[%i,%i] c[%i,%i] :: (%i,%i) :: %c :: %%%c :: %02x+%02x",
+          spr.name, bool2char(spr.edited), spr.tx, spr.ty, spr.cx, spr.cy,
+          spr.x, spr.y, cur == 0 ? COLOR_0 : ((cur + 1) + '0'),
           bool2char(spr.loop), byte[0], byte[1]);
 }
 
@@ -109,13 +128,17 @@ void spr_draw() {
   clear();
   refresh();
 
-  wclear(spr.info);
+  wclear(spr.status);
   spr_status();
-  wrefresh(spr.info);
+  wrefresh(spr.status);
 
-  wclear(spr.draw);
-  world_draw(spr.world);
-  wrefresh(spr.draw);
+  for (int x = 0; x < 2; x++) {
+    for (int y = 0; y < 2; y++) {
+      wclear(spr.draw[x][y]);
+      world_draw(spr.world);
+      wrefresh(spr.draw[x][y]);
+    }
+  }
 
   spr.redraw = false;
 }
@@ -213,7 +236,7 @@ void chr2world(struct world *world, char *file) {
   long sz = ftell(f);
   fseek(f, 0, SEEK_SET);
 
-  uint8_t *data = calloc(MIN(sz, CHR_SZ), sizeof(uint8_t));
+  uint8_t *data = calloc(MAX(sz, CHR_SZ), sizeof(uint8_t));
   fread(data, 1, sz, f);
 
   // * READING THE CHR FORMAT*
@@ -248,6 +271,7 @@ void chr2world(struct world *world, char *file) {
   free(data);
   fclose(f);
 
+  spr_log("reloaded :)\n");
   spr.redraw = true;
 }
 
@@ -271,25 +295,32 @@ int curses_init() {
   init_pair(3, COLOR_2_FG, COLOR_2_BG);
   init_pair(4, COLOR_3_FG, COLOR_3_BG);
 
-  spr.info = newwin(1, 64, 0, 0);
-  spr.draw = newwin(W, W, 1, 0);
-  spr.out = newwin(1, 64, 1 + W, 0);
+  spr.status = newwin(1, 64, 0, 0);
+  for (int x = 0; x < 2; x++)
+    for (int y = 0; y < 2; y++)
+      spr.draw[x][y] = newwin(W, W, 1 + y * (W + 1), x * (W + 1));
+
+  spr.out = newwin(1, 64, 2 * (W + 1), 0);
 
   return 0;
 }
 
 void curses_destroy() {
-  delwin(spr.info), delwin(spr.draw), delwin(spr.out);
+  delwin(spr.status), delwin(spr.out);
+  for (int i = 0; i < 2; ++i)
+    for (int j = 0; j < 2; ++j)
+      delwin(spr.draw[i][j]);
   endwin();
 }
 
 void curses_clear() {
   clear();
   refresh();
-  wclear(spr.info);
-  wrefresh(spr.info);
-  wclear(spr.draw);
-  wrefresh(spr.draw);
+  wclear(spr.status);
+  wrefresh(spr.status);
+  for (int i = 0; i < 2; ++i)
+    for (int j = 0; j < 2; ++j)
+      wclear(spr.draw[i][j]), wrefresh(spr.draw[i][j]);
 }
 
 //================= MAIN ======================
@@ -314,17 +345,18 @@ int main(int argc, char *argv[]) {
     switch (ch) {
       //================= MOVEMENT ======================
     case KEY_RIGHT:
-      if (!spr.loop && spr.x == W - 1)
+      if (!spr.loop && spr.x == W - 1) {
+        spr.x = 0;
         goto TRIGHT;
+      }
       spr.x = (spr.x + 1) % W;
       spr.redraw = true;
       break;
 
     case KEY_LEFT:
       if (spr.x == 0) {
-        if (spr.loop)
-          spr.x = W - 1;
-        else
+        spr.x = W - 1;
+        if (!spr.loop)
           goto TLEFT;
       } else
         spr.x = (spr.x - 1) % W;
@@ -333,14 +365,20 @@ int main(int argc, char *argv[]) {
       break;
 
     case KEY_DOWN:
+      if (!spr.loop && spr.y == W - 1) {
+        spr.y = 0;
+        goto TDOWN;
+      }
       spr.y = (spr.y + 1) % W;
       spr.redraw = true;
       break;
 
     case KEY_UP:
-      if (spr.y == 0)
+      if (spr.y == 0) {
         spr.y = W - 1;
-      else
+        if (!spr.loop)
+          goto TUP;
+      } else
         spr.y = (spr.y - 1) % W;
 
       spr.redraw = true;
@@ -349,29 +387,51 @@ int main(int argc, char *argv[]) {
     case 'd':
     TRIGHT:
       spr.tx = (spr.tx + 1) % T;
+      if (spr.tx == 0)
+        spr.cx = T - 1;
+      else if (spr.cx == T - 1 && spr.tx == 1)
+        spr.cx = 0;
+      else if (spr.tx > spr.cx + 1)
+        spr.cx = (spr.cx + 1) % T;
+
       spr.redraw = true;
       break;
 
     case 'a':
     TLEFT:
       if (spr.tx == 0)
-        spr.tx = T - 1;
-      else
-        spr.tx = (spr.tx - 1) % T;
+        spr.tx = spr.cx = T - 1;
+      else {
+        spr.tx--;
+        if (spr.tx < spr.cx)
+          spr.cx--;
+      }
 
       spr.redraw = true;
       break;
 
     case 's':
+    TDOWN:
       spr.ty = (spr.ty + 1) % T;
+      if (spr.ty == 0)
+        spr.cy = T - 1;
+      else if (spr.cy == T - 1 && spr.ty == 1)
+        spr.cy = 0;
+      else if (spr.ty > spr.cy + 1)
+        spr.cy = (spr.cy + 1) % T;
+
       spr.redraw = true;
       break;
 
     case 'w':
+    TUP:
       if (spr.ty == 0)
-        spr.ty = T - 1;
-      else
-        spr.ty = (spr.ty - 1) % T;
+        spr.ty = spr.cy = T - 1;
+      else {
+        spr.ty--;
+        if (spr.ty < spr.cy)
+          spr.cy--;
+      }
 
       spr.redraw = true;
       break;
@@ -381,11 +441,12 @@ int main(int argc, char *argv[]) {
     case '2':
     case '3':
     case '4':
-      spr.edited |= world_edit(spr.world, spr.x, spr.y, (ch - '1'));
+      spr.edited |=
+          world_edit(spr.world, spr.x, spr.y, spr.tx, spr.ty, (ch - '1'));
       spr.redraw = true;
       break;
 
-    case 'z':
+    case '%':
       spr.loop = !spr.loop;
       spr.redraw = true;
       break;
