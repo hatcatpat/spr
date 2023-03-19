@@ -56,6 +56,7 @@ follows the [suckless](suckless.org) style of config, so just edit the macros in
 
 ./spr filename
 
+mouse: moves cursor
 arrows: moves cursor
 wasd: jumps to next sprite
 q: quit
