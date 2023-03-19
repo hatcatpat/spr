@@ -2,8 +2,9 @@
 ## a terminal pixel editor for .chr files
 
 <p align="center">
-  <img alt="spr example with a familiar fellow" src="https://user-images.githubusercontent.com/39860407/226173017-be2ce035-249d-4460-912e-8415a32fe9f9.png"/>
+  <img alt="spr example with a familiar fellow" src="https://user-images.githubusercontent.com/39860407/226191884-4d1e8bf3-befc-4d58-a064-b9365ad080bc.png"/>
 </p>
+
 
 i was tinkering around with the nes and 6502 assembly, but i needed a way to:
 
