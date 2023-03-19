@@ -54,8 +54,6 @@ dkms.conf
 #
 #
 #
-# app
 spr
-
-# chr
 *.chr
+*.swp
