@@ -93,11 +93,10 @@ void spr_status() {
 
   color_t cur = spr_get(spr.x, spr.y, spr.tx, spr.ty);
 
-  wprintw(spr.status,
-          "%s%c :: t[%i,%i] c[%i,%i] :: (%i,%i) :: %c :: %%%c :: %02x+%02x",
-          spr.name, bool2char(spr.edited), spr.tx, spr.ty, spr.cx, spr.cy,
-          spr.x, spr.y, cur == 0 ? COLOR_0 : ((cur + 1) + '0'),
-          bool2char(spr.loop), byte[0], byte[1]);
+  wprintw(spr.status, "%s%c :: [%i,%i] :: (%i,%i) :: %c :: %%%c :: %02x+%02x",
+          spr.name, bool2char(spr.edited), spr.tx, spr.ty, spr.x, spr.y,
+          cur == 0 ? COLOR_0 : ((cur + 1) + '0'), bool2char(spr.loop), byte[0],
+          byte[1]);
 }
 
 void spr_draw() {
