@@ -2,7 +2,7 @@ cc=gcc
 
 all: spr
 
-debug: d = -g
+debug: d= -g
 debug: spr
 
 spr: *.c *.h
@@ -10,6 +10,12 @@ spr: *.c *.h
 
 run: all
 	./spr $(name)
+
+install: all
+	cp spr /usr/bin
+
+uninstall: all
+	rm /usr/bin/spr
 
 clean:
 	rm spr
