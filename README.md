@@ -2,7 +2,7 @@
 ## a terminal pixel editor for .chr files
 
 <p align="center">
-  <img alt="spr example with a familiar fellow" src="https://user-images.githubusercontent.com/39860407/226191884-4d1e8bf3-befc-4d58-a064-b9365ad080bc.png"/>
+  <img alt="spr example with a familiar fellow" src="https://user-images.githubusercontent.com/39860407/226191884-4d1e8bf3-befc-4d58-a064-b9365ad080bc.png" width=50% height=50%/>
 </p>
 
 
@@ -57,13 +57,13 @@ follows the [suckless](suckless.org) style of config, so just edit the macros in
 
 ./spr filename
 
-mouse: moves cursor
-arrows: moves cursor
-wasd: jumps to next sprite
-q: quit
-r: reload file
-enter: saves file
-%: toggles wrap. when enabled, causes the cursor to wrap around the current sprite rather than changing to a different sprite
+* mouse: moves cursor
+* arrows: moves cursor
+* wasd: jumps to next sprite
+* q: quit
+* r: reload file
+* enter: saves file
+* %: toggles wrap. when enabled, causes the cursor to wrap around the current sprite rather than changing to a different sprite
 
 status bar (in order of appearance):
 * file name (- for unedited, + for edited)
