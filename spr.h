@@ -17,7 +17,7 @@ typedef uint8_t byte_t;
 struct spr_ {
   byte_t data[SZ];
   char *name;
-  bool quit, redraw, loop, edited;
+  bool quit, redraw, loop, edited, numbers;
   coord_t x, y, spx, spy, cx, cy;
   WINDOW *status, *draw[2][2], *out;
 };
@@ -30,7 +30,7 @@ int spr_load();
 void spr_log(char *fmt, ...);
 void spr_draw_data();
 bool spr_set(int x, int y, int spx, int spy, byte_t c);
-int spr_geti(int x, int y, int spx, int spy);
+int spr_geti(int y, int spx, int spy);
 byte_t spr_get(int x, int y, int spx, int spy);
 
 //================= CURSES ======================

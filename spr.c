@@ -14,11 +14,10 @@ struct spr_ spr = {0};
 
 //=============================================
 int color2char(byte_t color) {
-#if SHOW_NUMBERS
-  return (color ? (color + '1') : COLOR_0) | COLOR_PAIR(color + 1);
-#else
-  return (color ? ' ' : COLOR_0) | COLOR_PAIR(color + 1);
-#endif
+  if (spr.numbers)
+    return (color ? (color + '1') : COLOR_0) | COLOR_PAIR(color + 1);
+  else
+    return (color ? ' ' : COLOR_0) | COLOR_PAIR(color + 1);
 }
 
 void spr_draw_data() {
@@ -38,12 +37,10 @@ void spr_draw_data() {
   }
 }
 
-int spr_geti(int x, int y, int spx, int spy) {
-  return y + spx * 16 + spy * 16 * 16;
-}
+int spr_geti(int y, int spx, int spy) { return y + spx * 16 + spy * 16 * 16; }
 
 byte_t spr_get(int x, int y, int spx, int spy) {
-  int I = spr_geti(x, y, spx, spy);
+  int I = spr_geti(y, spx, spy);
   return GET_BIT(spr.data[I], 7 - x) + 2 * GET_BIT(spr.data[I + 8], 7 - x);
 }
 
@@ -51,7 +48,7 @@ bool spr_set(int x, int y, int spx, int spy, byte_t c) {
   if (c == spr_get(x, y, spx, spy))
     return false;
 
-  int I = spr_geti(x, y, spx, spy);
+  int I = spr_geti(y, spx, spy);
   byte_t b = BIT(7 - x);
   switch (c) {
   case 0:
@@ -83,6 +80,7 @@ int spr_init(char *name) {
   spr.redraw = true;
   spr.loop = false;
   spr.edited = false;
+  spr.numbers = SHOW_NUMBERS;
   spr.name = name;
 
   if (!access(name, F_OK)) {
@@ -99,7 +97,7 @@ int spr_init(char *name) {
 
 char bool2char(bool b) { return b ? '+' : '-'; }
 void spr_status() {
-  int I = spr_geti(spr.x, spr.y, spr.spx, spr.spy);
+  int I = spr_geti(spr.y, spr.spx, spr.spy);
   byte_t b[2] = {spr.data[I], spr.data[I + 8]};
   byte_t cur = spr_get(spr.x, spr.y, spr.spx, spr.spy);
   wprintw(spr.status, "%s%c :: [%i,%i] :: (%i,%i) :: %c :: %02x+%02x :: %%%c",
@@ -388,12 +386,26 @@ int main(int argc, char *argv[]) {
       spr.redraw = true;
       break;
 
+    case '`':
+      spr.numbers = !spr.numbers;
+      spr.redraw = true;
+      break;
+
     case '\n':
       spr_save();
       break;
 
     case 'r':
       spr_load();
+      break;
+
+    case KEY_DC:
+      for (int r = 0; r < 8; ++r) {
+        int I = spr_geti(r, spr.spx, spr.spy);
+        spr.edited |= spr.data[I] | spr.data[I];
+        spr.data[I] = spr.data[I + 8] = 0;
+      }
+      spr.redraw = true;
       break;
 
     case 'q':
