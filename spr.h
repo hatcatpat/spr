@@ -17,8 +17,9 @@ typedef uint8_t byte_t;
 struct spr_ {
   byte_t data[SZ];
   char *name;
-  bool quit, redraw, loop, edited, numbers;
+  bool quit, redraw, loop, edited, numbers, fill;
   coord_t x, y, spx, spy, cx, cy;
+  byte_t last;
   WINDOW *status, *draw[2][2], *out;
 };
 int spr_init(char *name);

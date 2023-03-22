@@ -81,6 +81,8 @@ int spr_init(char *name) {
   spr.loop = false;
   spr.edited = false;
   spr.numbers = SHOW_NUMBERS;
+  spr.fill = false;
+  spr.last = 0;
   spr.name = name;
 
   if (!access(name, F_OK)) {
@@ -100,10 +102,11 @@ void spr_status() {
   int I = spr_geti(spr.y, spr.spx, spr.spy);
   byte_t b[2] = {spr.data[I], spr.data[I + 8]};
   byte_t cur = spr_get(spr.x, spr.y, spr.spx, spr.spy);
-  wprintw(spr.status, "%s%c :: [%i,%i] :: (%i,%i) :: %c :: %02x+%02x :: %%%c",
+  wprintw(spr.status,
+          "%s%c :: [%i,%i] :: (%i,%i) :: %c :: %02x+%02x :: %%%c f%c%i",
           spr.name, bool2char(spr.edited), spr.spx, spr.spy, spr.x, spr.y,
           cur == 0 ? COLOR_0 : ((cur + 1) + '0'), b[0], b[1],
-          bool2char(spr.loop));
+          bool2char(spr.loop), bool2char(spr.fill), spr.last + 1);
 }
 
 void spr_draw() {
@@ -280,12 +283,17 @@ int main(int argc, char *argv[]) {
 #endif
 
       //================= MOVEMENT ======================
+      // move cursor
     case KEY_RIGHT:
       if (!spr.loop && spr.x == 8 - 1) {
         spr.x = 0;
         goto TRIGHT;
       }
       spr.x = (spr.x + 1) % 8;
+
+      if (spr.fill)
+        goto SET;
+
       spr.redraw = true;
       break;
 
@@ -297,6 +305,9 @@ int main(int argc, char *argv[]) {
       } else
         spr.x = (spr.x - 1) % 8;
 
+      if (spr.fill)
+        goto SET;
+
       spr.redraw = true;
       break;
 
@@ -306,6 +317,10 @@ int main(int argc, char *argv[]) {
         goto TDOWN;
       }
       spr.y = (spr.y + 1) % 8;
+
+      if (spr.fill)
+        goto SET;
+
       spr.redraw = true;
       break;
 
@@ -317,9 +332,13 @@ int main(int argc, char *argv[]) {
       } else
         spr.y = (spr.y - 1) % 8;
 
+      if (spr.fill)
+        goto SET;
+
       spr.redraw = true;
       break;
 
+      // move sprite
     case 'd':
     TRIGHT:
       spr.spx = (spr.spx + 1) % 16;
@@ -329,6 +348,9 @@ int main(int argc, char *argv[]) {
         spr.cx = 0;
       else if (spr.spx > spr.cx + 1)
         spr.cx = (spr.cx + 1) % 16;
+
+      if (spr.fill)
+        goto SET;
 
       spr.redraw = true;
       break;
@@ -343,6 +365,9 @@ int main(int argc, char *argv[]) {
           spr.cx--;
       }
 
+      if (spr.fill)
+        goto SET;
+
       spr.redraw = true;
       break;
 
@@ -355,6 +380,9 @@ int main(int argc, char *argv[]) {
         spr.cy = 0;
       else if (spr.spy > spr.cy + 1)
         spr.cy = (spr.cy + 1) % 16;
+
+      if (spr.fill)
+        goto SET;
 
       spr.redraw = true;
       break;
@@ -369,6 +397,9 @@ int main(int argc, char *argv[]) {
           spr.cy--;
       }
 
+      if (spr.fill)
+        goto SET;
+
       spr.redraw = true;
       break;
       //================= !MOVEMENT ======================
@@ -376,30 +407,37 @@ int main(int argc, char *argv[]) {
     case '1':
     case '2':
     case '3':
-    case '4':
-      spr.edited |= spr_set(spr.x, spr.y, spr.spx, spr.spy, (ch - '1'));
+    case '4': // set color
+      spr.last = ch - '1';
+    SET:
+      spr.edited |= spr_set(spr.x, spr.y, spr.spx, spr.spy, spr.last);
       spr.redraw = true;
       break;
 
-    case '%':
+    case '%': // toggle loop
       spr.loop = !spr.loop;
       spr.redraw = true;
       break;
 
-    case '`':
+    case '`': // toggle numbers
       spr.numbers = !spr.numbers;
       spr.redraw = true;
       break;
 
-    case '\n':
+    case '\n': // save
       spr_save();
       break;
 
-    case 'r':
+    case 'r': // load
       spr_load();
       break;
 
-    case KEY_DC:
+    case 'f': // toggle fill-mode
+      spr.fill = !spr.fill;
+      spr.redraw = true;
+      break;
+
+    case KEY_DC: // delete sprite
       for (int r = 0; r < 8; ++r) {
         int I = spr_geti(r, spr.spx, spr.spy);
         spr.edited |= spr.data[I] | spr.data[I];
@@ -408,7 +446,7 @@ int main(int argc, char *argv[]) {
       spr.redraw = true;
       break;
 
-    case 'q':
+    case 'q': // quit
       spr.quit = true;
       break;
     }
